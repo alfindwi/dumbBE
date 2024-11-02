@@ -24,7 +24,8 @@ model User {
   address String?
   role Role ? @default(USER)
 
-  cartItem CartItem[]
+  cartItem Cart[]
+  orders Order[]
 }
 
 enum gender {
@@ -50,21 +51,54 @@ model Product{
   product_desc String?
   price String?
   stok String?
-
   categoryId Int
+  
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  cartItem CartItem[]
+  cartItem Cart[]
+  orderItems OrderItem[]
 }
 
-model CartItem {
+model Cart {
   id Int @id @default(autoincrement())
   userId Int
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   productId Int
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   quantity Int
+  totalAmount Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
 
   @@map("cart_items")
+}
+
+model Order{
+  id Int @id @default(autoincrement())
+  userId Int
+  status OrderStatus @default(PENDING)
+  totalAmount Int @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderItems OrderItem[]
+}
+
+model OrderItem{
+  id Int @id @default(autoincrement())
+  orderId Int
+  productId Int
+  quantity Int @default(1)
+  productPrice Int
+  totalPrice Int @default(0)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+enum OrderStatus {
+  PENDING
+  SUCCESS
+  CANCEL
 }
