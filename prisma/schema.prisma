@@ -54,27 +54,34 @@ model Product{
   categoryId Int
   
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  cartItem Cart[]
-  orderItems OrderItem[]
+  cartItems CartItem[]
 }
 
 model Cart {
   id Int @id @default(autoincrement())
   userId Int
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  productId Int
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  quantity Int
   totalAmount Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
 
-  @@map("cart_items")
+  cartItems CartItem[]
+}
+
+model CartItem {
+  id Int @id @default(autoincrement())
+  cartId Int
+  productId Int
+  quantity Int @default(1)
+  productPrice Int
+  totalPrice Int
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Order{
-  id Int @id @default(autoincrement())
+  id Int  @id @default(autoincrement())
   userId Int
   status OrderStatus @default(PENDING)
   totalAmount Int @default(0)
@@ -82,19 +89,6 @@ model Order{
   updatedAt    DateTime     @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  orderItems OrderItem[]
-}
-
-model OrderItem{
-  id Int @id @default(autoincrement())
-  orderId Int
-  productId Int
-  quantity Int @default(1)
-  productPrice Int
-  totalPrice Int @default(0)
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 enum OrderStatus {
