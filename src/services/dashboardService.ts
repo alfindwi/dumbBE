@@ -24,3 +24,4 @@ export const getInventoryReductionData = async () => {
 
   return formattedData;
 };
+
