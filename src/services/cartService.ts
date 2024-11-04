@@ -31,13 +31,13 @@ export const getCart = async (userId: number) => {
 
 export const createCartItem = async (userId: number, productId: number) => {
   try {
-    const cart = await prisma.cart.findFirst({
+    let cart = await prisma.cart.findFirst({
       where: { userId },
       include: { cartItems: true },
     });
 
     if (!cart) {
-      await prisma.cart.create({
+      cart = await prisma.cart.create({
         data: {
           userId,
           totalAmount: 0,
@@ -61,7 +61,7 @@ export const createCartItem = async (userId: number, productId: number) => {
       throw new Error("Not enough stock available");
     }
 
-    const existingCartItem = cart?.cartItems.find(
+    const existingCartItem = cart.cartItems.find(
       (item) => item.productId === productId
     );
 
@@ -79,11 +79,11 @@ export const createCartItem = async (userId: number, productId: number) => {
       throw new Error("Invalid product price");
     }
 
-    const totalPrice = (productPrice * quantity);
+    const totalPrice = productPrice * quantity;
 
     await prisma.cartItem.create({
       data: {
-        cartId: cart!.id,
+        cartId: cart.id, 
         productId,
         quantity,
         productPrice: productPrice,
@@ -92,16 +92,16 @@ export const createCartItem = async (userId: number, productId: number) => {
     });
 
     await prisma.cart.update({
-      where: { id: cart!.id },
+      where: { id: cart.id }, 
       data: {
         totalAmount: {
-          increment: (totalPrice),
+          increment: totalPrice,
         },
       },
     });
 
     const updatedCart = await prisma.cart.findUnique({
-      where: { id: cart!.id },
+      where: { id: cart.id },
       include: { cartItems: true },
     });
 
@@ -128,25 +128,35 @@ export const createCartToOrder = async (cartId: number, userId: number) => {
     }
 
     const totalAmount = cart.cartItems.reduce((sum, item) => {
-      return sum + (item.totalPrice);
+      return sum + item.totalPrice;
     }, 0);
 
-    console.log(totalAmount);
-
+    // Buat order baru
     const order = await prisma.order.create({
       data: {
         userId: cart.userId,
         totalAmount: totalAmount,
         status: OrderStatus.PENDING,
-        id: cart.id,
       },
     });
 
-    console.log(order)
+    const orderItems = cart.cartItems.map((item) => ({
+      orderId: order.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      productPrice: item.productPrice,
+      totalPrice: item.totalPrice,
+    }));
+
+    await prisma.orderItems.createMany({
+      data: orderItems,
+    });
 
     return order;
   } catch (error) {
-    throw new Error(`Error creating order from cart`);
+    throw new Error(
+      `Error creating order from cart: ${(error as Error).message}`
+    );
   }
 };
 
@@ -156,7 +166,9 @@ export const updateCartItem = async (
   newQuantity: number | undefined
 ) => {
   try {
-    console.log(`Updating cart item: userId=${userId}, cartItemId=${cartItemId}, newQuantity=${newQuantity}`);
+    console.log(
+      `Updating cart item: userId=${userId}, cartItemId=${cartItemId}, newQuantity=${newQuantity}`
+    );
 
     // Pastikan newQuantity adalah angka dan valid
     if (newQuantity === undefined || isNaN(newQuantity)) {
@@ -212,7 +224,10 @@ export const updateCartItem = async (
       where: { cartId: cartItem.cartId },
     });
 
-    const totalAmount = cartItems.reduce((acc, item) => acc + parseInt(item.totalPrice?.toString() || "0"), 0);
+    const totalAmount = cartItems.reduce(
+      (acc, item) => acc + parseInt(item.totalPrice?.toString() || "0"),
+      0
+    );
 
     await prisma.cart.update({
       where: { id: cartItem.cartId },
@@ -228,7 +243,6 @@ export const updateCartItem = async (
     throw new Error(`Error updating cart item: ${(error as Error).message}`);
   }
 };
-
 
 export const deleteCartItem = async (cartItemId: number, userId: number) => {
   try {
@@ -266,7 +280,7 @@ export const deleteCartItem = async (cartItemId: number, userId: number) => {
       where: { cartId: cartItem.cartId },
     });
     const totalAmount = cartItems.reduce(
-      (acc, item) => acc + (item.totalPrice),
+      (acc, item) => acc + item.totalPrice,
       0
     );
 

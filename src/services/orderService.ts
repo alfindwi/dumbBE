@@ -1,13 +1,15 @@
-import { parse } from "dotenv";
-import { prisma } from "../libs/prisma";
 import midtrans from "../libs/midtrans";
-import { OrderStatus } from "@prisma/client";
+import { prisma } from "../libs/prisma";
 
 export const getOrder = async (userId: number) => {
   try {
     const orders = await prisma.order.findMany({
       where: {
         userId: userId,
+      
+      },
+      include: {
+        OrderItems: true,
       },
     });
 
@@ -16,8 +18,6 @@ export const getOrder = async (userId: number) => {
     throw new Error(`Error retrieving orders: ${(error as Error).message}`);
   }
 };
-
-
 
 export const createOrder = async (cartId: number) => {
   try {
@@ -34,8 +34,9 @@ export const createOrder = async (cartId: number) => {
       throw new Error("Cart not found");
     }
 
+    // Menghitung totalAmount berdasarkan harga per item dan jumlah kuantitas
     const totalAmount = cart.cartItems.reduce(
-      (sum, item) => sum + (item.totalPrice),
+      (sum, item) => sum + item.productPrice * item.quantity, // Menghitung total berdasarkan harga per unit * kuantitas
       0
     );
 
@@ -46,7 +47,7 @@ export const createOrder = async (cartId: number) => {
       },
       item_details: cart.cartItems.map((item) => ({
         id: item.productId,
-        price: item.totalPrice,
+        price: item.productPrice,
         quantity: item.quantity,
         name: `ProductDumbMerch-${item.productId}`,
       })),
@@ -54,22 +55,7 @@ export const createOrder = async (cartId: number) => {
 
     const transaction = await midtrans.createTransaction(parameters);
 
-    const orderId = transaction.order_id; 
-
-    console.log("Created transaction with orderId:", orderId);
-
-    // setTimeout(async () => {
-    //   const updatedOrder = await prisma.order.findUnique({
-    //     where: { id: orderId },
-    //   });
-
-    //   if (updatedOrder?.status === "PENDING") {
-    //     await prisma.order.update({
-    //       where: { id: orderId },
-    //       data: { status: OrderStatus.CANCEL },
-    //     });
-    //   }
-    // }, 10000900000);
+    const orderId = transaction.order_id;
 
     await clearCart(cart.userId);
 
@@ -82,27 +68,35 @@ export const createOrder = async (cartId: number) => {
   }
 };
 
-// export const cancelOrder = async (orderId: string) => {
-//   // Ubah tipe menjadi string jika order_id dari Midtrans adalah string
-//   try {
-//     const order = await prisma.order.findUnique({
-//       where: { id: parseInt(orderId) }, // Konversi string menjadi number jika perlu
-//     });
 
-//     if (order && order.status === "PENDING") {
-//       await prisma.order.update({
-//         where: { id: order.id },
-//         data: { status: "CANCEL" },
-//       });
+export const cancelOrder = async (orderId: number) => {
+  try {
+    if (!orderId) {
+      throw new Error("Invalid order ID");
+    }
 
-//       await prisma.cartItem.deleteMany({
-//         where: { cartId: order.id }, // Pastikan ini sesuai dengan relasi yang benar
-//       });
-//     }
-//   } catch (error) {
-//     throw new Error(`Error canceling order: ${(error as Error).message}`);
-//   }
-// };
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    // Lakukan pembatalan dengan mengubah status menjadi "CANCEL"
+    const canceledOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "CANCEL" },
+    });
+    console.log("Order canceled:", canceledOrder);
+
+    return canceledOrder;
+  } catch (error) {
+    throw new Error(`Error canceling order: ${(error as Error).message}`);
+  }
+};
 
 export const clearCart = async (userId: number) => {
   try {
