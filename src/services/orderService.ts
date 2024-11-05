@@ -9,7 +9,11 @@ export const getOrder = async (userId: number) => {
       
       },
       include: {
-        OrderItems: true,
+        OrderItems: {
+          include: {
+            product: true,
+          }
+        },
       },
     });
 
@@ -34,9 +38,8 @@ export const createOrder = async (cartId: number) => {
       throw new Error("Cart not found");
     }
 
-    // Menghitung totalAmount berdasarkan harga per item dan jumlah kuantitas
     const totalAmount = cart.cartItems.reduce(
-      (sum, item) => sum + item.productPrice * item.quantity, // Menghitung total berdasarkan harga per unit * kuantitas
+      (sum, item) => sum + item.productPrice * item.quantity, 
       0
     );
 

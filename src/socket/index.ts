@@ -1,33 +1,38 @@
 import { Server, Socket } from "socket.io";
-
-const idAdmin = "1";
-let socketAdmin: Socket;
-const chatUser: string[] = [];
+import * as chatService from "../services/chatService";
 
 export const socketHandler = (socket: Socket, io: Server) => {
-    console.log(socket.id + " connected");
-    const userId = socket.handshake.query.userId
+  console.log(socket.id + " connected");
 
-    if(userId !== idAdmin){
-        chatUser.push(userId as string);
-        socket.join(`${userId}${idAdmin}`);
-        socket.emit("connected", {rooms: [`${userId}${idAdmin}`]})
+  socket.on("join room", async (roomId: string) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
 
-        if(socketAdmin){
-            socketAdmin.join(`${userId}${idAdmin}`);
-        }
-    } else {
-        socketAdmin = socket;
-        const listRooms = chatUser.map((user) => `${user}${idAdmin}`);
-        socketAdmin.join(listRooms)
-        socketAdmin.emit("connected", {rooms: listRooms})
+    socket.to(roomId).emit("user joined", socket.id);
+  });
+
+  socket.on(
+    "chat message",
+    async (data: { content: string; roomId: string; userId: number }) => {
+      const { content, roomId, userId } = data;
+
+      try {
+        const savedMessage = await chatService.sendMessage(
+          userId,
+          +roomId,
+          content
+        );
+
+        io.to(roomId).emit("chat message", savedMessage);
+      } catch (error) {
+        console.log("Error sending message:", error);
+        socket.emit("error", { message: "Failed to send message" });
+      }
     }
+  );
 
-    socket.on("disconnect", () => {
-        console.log(socket.id + " disconnected");
-    })
+  socket.on("disconnect", () => {
+    console.log(socket.id + " disconnected");
+  });
 
-    socket.on("chat message", (data: {message: string; roomId: string}) =>{
-        io.to(data.roomId).emit("chat message", data.message)
-    })
-}
+};

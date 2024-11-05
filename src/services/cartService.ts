@@ -264,12 +264,12 @@ export const deleteCartItem = async (cartItemId: number, userId: number) => {
       throw new Error("Unauthorized");
     }
 
-    const productStock = (cartItem.product.stok || 0).toString();
+    const productStock = parseInt(cartItem.product.stok || "0")
     const newStock = productStock + cartItem.quantity;
 
     await prisma.product.update({
       where: { id: cartItem.product.id },
-      data: { stok: newStock },
+      data: { stok: newStock.toString() },
     });
 
     await prisma.cartItem.delete({
