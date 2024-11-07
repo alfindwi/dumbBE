@@ -11,10 +11,15 @@ import * as chatService from "./src/services/chatService";
 dotenv.config();
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+app.use(cors());
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    credentials: true,
+  },
+});
 const port = 3000;
 
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(router);
@@ -36,10 +41,6 @@ io.on("connection", (socket) => {
   socket.on("chat message", async (data) => {
     // Ambil userId, roomId, dan content dari data yang diterima
     const { userId, roomId, content } = data;
-
-    console.log("Received userId:", userId); // Cek nilai userId
-    console.log("Received roomId:", roomId); // Cek nilai roomId
-    console.log("Received content:", content); // Cek nilai content
 
     try {
       const savedMessage = await chatService.sendMessage(

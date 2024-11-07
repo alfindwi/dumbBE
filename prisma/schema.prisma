@@ -107,7 +107,7 @@ model CartItem {
 }
 
 model Order {
-  id          Int         @id @default(autoincrement())
+  id          String         @id
   userId      Int
   status      OrderStatus @default(PENDING)
   totalAmount Int         @default(0)
@@ -120,7 +120,7 @@ model Order {
 
 model OrderItems {
   id           Int @id @default(autoincrement())
-  orderId      Int
+  orderId      String
   productId    Int
   quantity     Int @default(1)
   productPrice Int

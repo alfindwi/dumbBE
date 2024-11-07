@@ -5,7 +5,7 @@ const cartRouter = Router();
 
 cartRouter.get("/", authentication, cartController.getCart);
 cartRouter.post("/", authentication ,cartController.createCartItem);
-cartRouter.post("/checkout", authentication, cartController.createCartToOrder);
+// cartRouter.post("/checkout", authentication, cartController.createCartToOrder);
 
 cartRouter.put("/:id", authentication, cartController.updateCartItem);
 

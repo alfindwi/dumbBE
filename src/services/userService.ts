@@ -36,6 +36,8 @@ export const updateUserService = async (
   }
 };
 
+
+
 export const getUserService = async () => {
   try {
     const users = await prisma.user.findMany();

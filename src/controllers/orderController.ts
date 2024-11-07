@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import * as orderService from "../services/orderService";
+import axios from "axios";
+import { prisma } from "../libs/prisma";
+import { OrderStatus } from "@prisma/client";
 
 export const getOrder = async (req: Request, res: Response) => {
   try {
@@ -34,20 +37,57 @@ export const createOrder = async (req: Request, res: Response) => {
   }
 };
 
-// export const handleMidtransNotification = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   const { order_id, transaction_status } = req.body;
 
-//   console.log("Received notification:", { order_id, transaction_status });
+export const paymentStatus = async (req: Request, res: Response) => {
+  const { orderId } = req.params;
 
-//   if (transaction_status === "capture") {
-//     // Pastikan order_id memiliki format yang benar, misalnya ambil ID numeriknya
-//     const orderNumber = parseInt(order_id.split("-")[1]); // Ambil ID dari order_id yang formatnya sesuai
-//     await orderService.updateOrderStatusToSuccess(orderNumber);
-//     res.status(200).json({ message: "Order updated to SUCCESS" });
-//   }
+  try {
+    const response = await axios.get(`https://api.sandbox.midtrans.com/v2/${orderId}/status`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from('SB-Mid-server-NsggXUakgJS9BCRRyMBxamM9').toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-//   res.status(200).json({ message: "No action taken" });
-// };
+    const { order_id, transaction_status } = response.data;
+
+    const statusMapping: Record<string, OrderStatus> = {
+      'settlement': OrderStatus.SUCCESS,
+      'pending': OrderStatus.PENDING,
+      'cancel': OrderStatus.CANCEL,
+      'expire': OrderStatus.CANCEL,
+      'deny': OrderStatus.CANCEL
+    };
+
+    const mappedStatus = statusMapping[transaction_status] || OrderStatus.PENDING;
+
+    const updateOrder = await prisma.order.update({
+      where: { id: order_id },
+      data: { status: mappedStatus }
+    });
+
+    res.status(200).json({ message: 'Order status updated successfully', updateOrder });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+export const handlePayment = async (req: Request, res: Response) => {
+  const {orderId, transaction_status} = req.body;
+
+  if(!orderId || !transaction_status) {
+    res.status(400).json({ error: "Missing required parameters" });
+  }
+  try {
+
+    const updateOrder = await orderService.handlePaymentStatus(orderId, transaction_status);
+
+    res.status(200).json({ updateOrder });
+    
+  } catch (error) {
+    
+  }
+}

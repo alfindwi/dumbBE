@@ -31,18 +31,18 @@ export const createCartItem = async (req: Request, res: Response) => {
   }
 };
 
-export const createCartToOrder = async (req: Request, res: Response) => {
-  try {
-    const userId = res.locals.user.id;
-    const { cartId } = req.body;
+// export const createCartToOrder = async (req: Request, res: Response) => {
+//   try {
+//     const userId = res.locals.user.id;
+//     const { cartId } = req.body;
 
-    const order = await cartService.createCartToOrder(cartId, userId);
+//     const order = await cartService.createCartToOrder(cartId, userId);
 
-    res.status(200).json({ order });
-  } catch (error) {
-    console.log(error);
-  }
-}
+//     res.status(200).json({ order });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// }
 
 export const updateCartItem = async (req: Request, res: Response) => {
   try {

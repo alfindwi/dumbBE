@@ -111,54 +111,54 @@ export const createCartItem = async (userId: number, productId: number) => {
   }
 };
 
-export const createCartToOrder = async (cartId: number, userId: number) => {
-  try {
-    const cart = await prisma.cart.findUnique({
-      where: {
-        id: cartId,
-        userId: userId,
-      },
-      include: {
-        cartItems: true,
-      },
-    });
+// export const createCartToOrder = async (cartId: number, userId: number) => {
+//   try {
+//     const cart = await prisma.cart.findUnique({
+//       where: {
+//         id: cartId,
+//         userId: userId,
+//       },
+//       include: {
+//         cartItems: true,
+//       },
+//     });
 
-    if (!cart) {
-      throw new Error("Cart not found");
-    }
+//     if (!cart) {
+//       throw new Error("Cart not found");
+//     }
 
-    const totalAmount = cart.cartItems.reduce((sum, item) => {
-      return sum + item.totalPrice;
-    }, 0);
+//     const totalAmount = cart.cartItems.reduce((sum, item) => {
+//       return sum + item.totalPrice;
+//     }, 0);
 
-    // Buat order baru
-    const order = await prisma.order.create({
-      data: {
-        userId: cart.userId,
-        totalAmount: totalAmount,
-        status: OrderStatus.PENDING,
-      },
-    });
+//     // Buat order baru
+//     const order = await prisma.order.create({
+//       data: {
+//         userId: cart.userId,
+//         totalAmount: totalAmount,
+//         status: OrderStatus.PENDING,
+//       },
+//     });
 
-    const orderItems = cart.cartItems.map((item) => ({
-      orderId: order.id,
-      productId: item.productId,
-      quantity: item.quantity,
-      productPrice: item.productPrice,
-      totalPrice: item.totalPrice,
-    }));
+//     const orderItems = cart.cartItems.map((item) => ({
+//       orderId: order.id,
+//       productId: item.productId,
+//       quantity: item.quantity,
+//       productPrice: item.productPrice,
+//       totalPrice: item.totalPrice,
+//     }));
 
-    await prisma.orderItems.createMany({
-      data: orderItems,
-    });
+//     await prisma.orderItems.createMany({
+//       data: orderItems,
+//     });
 
-    return order;
-  } catch (error) {
-    throw new Error(
-      `Error creating order from cart: ${(error as Error).message}`
-    );
-  }
-};
+//     return order;
+//   } catch (error) {
+//     throw new Error(
+//       `Error creating order from cart: ${(error as Error).message}`
+//     );
+//   }
+// };
 
 export const updateCartItem = async (
   userId: number,
