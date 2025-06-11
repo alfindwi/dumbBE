@@ -70,6 +70,9 @@ export const createOrder = async (cartId: number) => {
         quantity: item.quantity,
         name: `ProductDumbMerch-${item.productId}`,
       })),
+      callbacks: {
+        finish: "http://localhost:5173"
+      }
     };
 
     const transaction = await midtrans.createTransaction(parameters);

@@ -24,22 +24,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(router);
 
-// Socket.io handler
 io.on("connection", (socket) => {
   console.log(socket.id + " connected");
 
-  // Join room event
   socket.on("join room", (roomId) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room ${roomId}`);
 
-    // Optional: broadcast to the room that a user joined
     socket.to(roomId).emit("user joined", socket.id);
   });
 
-  // Chat message event
   socket.on("chat message", async (data) => {
-    // Ambil userId, roomId, dan content dari data yang diterima
     const { userId, roomId, content } = data;
 
     try {
