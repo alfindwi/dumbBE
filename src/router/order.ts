@@ -6,8 +6,8 @@ const orderRouter = Router();
 orderRouter.get("/", authentication, orderController.getOrder);
 orderRouter.post("/", authentication ,orderController.createOrder);
 
-orderRouter.get("/payment/:orderId", orderController.handlePayment)
-
+// orderRouter.get("/payment/:orderId", orderController.handlePayment)
+orderRouter.post("/midtrans/notification", orderController.handleNotification);
 orderRouter.get('/payment/status/:orderId', orderController.paymentStatus)
 
 export default orderRouter;

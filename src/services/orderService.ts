@@ -1,8 +1,6 @@
+import { OrderStatus } from "@prisma/client";
 import midtrans from "../libs/midtrans";
 import { prisma } from "../libs/prisma";
-import axios from "axios";
-
-const MIDTRANS_SERVER_KEY = process.env.MT_SERVER_KEY;
 
 export const getOrder = async (userId: number) => {
   try {
@@ -29,7 +27,11 @@ export const createOrder = async (cartId: number) => {
   try {
     const cart = await prisma.cart.findUnique({
       where: { id: cartId },
-      include: { cartItems: true },
+      include: {
+        cartItems: {
+          include: { product: true },
+        },
+      },
     });
 
     if (!cart) {
@@ -41,13 +43,14 @@ export const createOrder = async (cartId: number) => {
       0
     );
 
-    const orderId = `ORDER-${cart.id}-${new Date().getTime()}`;
+    const orderId = `ORDER-${cart.id}-${Date.now()}`;
 
-    const order = await prisma.order.create({
+    await prisma.order.create({
       data: {
         id: orderId,
         userId: cart.userId,
         totalAmount,
+        status: OrderStatus.PENDING,
         OrderItems: {
           create: cart.cartItems.map((item) => ({
             productId: item.productId,
@@ -61,18 +64,16 @@ export const createOrder = async (cartId: number) => {
 
     const parameters = {
       transaction_details: {
-        order_id: orderId,  // Use the same orderId here for the transaction
+        order_id: orderId,
         gross_amount: totalAmount,
       },
       item_details: cart.cartItems.map((item) => ({
         id: item.productId.toString(),
         price: item.productPrice,
         quantity: item.quantity,
-        name: `ProductDumbMerch-${item.productId}`,
+        name: item.product.product_name,
       })),
-      callbacks: {
-        finish: "http://localhost:5173"
-      }
+ 
     };
 
     const transaction = await midtrans.createTransaction(parameters);
@@ -82,7 +83,7 @@ export const createOrder = async (cartId: number) => {
     return {
       cart,
       transaction,
-      order,
+      orderId,
     };
   } catch (error) {
     throw new Error(`Error creating order item: ${(error as Error).message}`);
@@ -90,25 +91,49 @@ export const createOrder = async (cartId: number) => {
 };
 
 
-
-export const handlePaymentStatus = async (orderId: string, transaction_status: string) => {
+export const handlePaymentNotification = async (
+  orderId: string,
+  transactionStatus: string,
+  fraudStatus?: string
+) => {
   try {
-    let status: "SUCCESS" | "CANCEL" = "CANCEL";
+    console.log("📥 Notification received:", { orderId, transactionStatus, fraudStatus });
 
-    if(transaction_status === "settlement") {
-      status = "SUCCESS";
+    if (orderId.startsWith("payment_notif_test")) {
+      return;
     }
 
-    const updateOrder = await prisma.order.update({
-      where: {id: orderId},
-      data: {status}
-    })
+    const statusMapping: Record<string, OrderStatus> = {
+      settlement: OrderStatus.SUCCESS,
+      capture: OrderStatus.SUCCESS,
+      pending: OrderStatus.PENDING,
+      cancel: OrderStatus.CANCEL,
+      expire: OrderStatus.CANCEL,
+      deny: OrderStatus.CANCEL,
+    };
 
-    return updateOrder
+    const mappedStatus = statusMapping[transactionStatus] || OrderStatus.PENDING;
+
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!existingOrder) {
+      throw new Error("Order not found");
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: mappedStatus },
+    });
+
+    return updatedOrder;
   } catch (error) {
-    
+    throw new Error(`Error handling payment notification: ${error}`);
   }
-}
+};
+
+
 
 export const clearCart = async (userId: number) => {
   try {

@@ -18,6 +18,35 @@ export const getOrder = async (req: Request, res: Response) => {
   }
 };
 
+export const handleNotification = async (req: Request, res: Response) => {
+  try {
+    const { order_id, transaction_status, fraud_status } = req.body;
+
+    if (!order_id || !transaction_status) {
+      res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    const updatedOrder = await orderService.handlePaymentNotification(
+      order_id,
+      transaction_status
+    );
+
+    console.log(
+      `✅ Midtrans notif diterima, order ${order_id} status: ${transaction_status}`
+    );
+
+    res.status(200).json({
+      message: "Notification handled successfully",
+      updatedOrder,
+    });
+  } catch (error) {
+    console.log(error);
+
+    const err = error as Error;
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const createOrder = async (req: Request, res: Response) => {
   try {
     const { cartId } = req.body;
@@ -37,57 +66,61 @@ export const createOrder = async (req: Request, res: Response) => {
   }
 };
 
-
 export const paymentStatus = async (req: Request, res: Response) => {
   const { orderId } = req.params;
 
   try {
-    const response = await axios.get(`https://api.sandbox.midtrans.com/v2/${orderId}/status`, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from('SB-Mid-server-NsggXUakgJS9BCRRyMBxamM9').toString('base64')}`,
-        'Content-Type': 'application/json'
+    const response = await axios.get(
+      `https://api.sandbox.midtrans.com/v2/${orderId}/status`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(
+            "SB-Mid-server-NsggXUakgJS9BCRRyMBxamM9"
+          ).toString("base64")}`,
+          "Content-Type": "application/json",
+        },
       }
-    });
+    );
 
     const { order_id, transaction_status } = response.data;
 
     const statusMapping: Record<string, OrderStatus> = {
-      'settlement': OrderStatus.SUCCESS,
-      'pending': OrderStatus.PENDING,
-      'cancel': OrderStatus.CANCEL,
-      'expire': OrderStatus.CANCEL,
-      'deny': OrderStatus.CANCEL
+      settlement: OrderStatus.SUCCESS,
+      pending: OrderStatus.PENDING,
+      cancel: OrderStatus.CANCEL,
+      expire: OrderStatus.CANCEL,
+      deny: OrderStatus.CANCEL,
     };
 
-    const mappedStatus = statusMapping[transaction_status] || OrderStatus.PENDING;
+    const mappedStatus =
+      statusMapping[transaction_status] || OrderStatus.PENDING;
 
     const updateOrder = await prisma.order.update({
       where: { id: order_id },
-      data: { status: mappedStatus }
+      data: { status: mappedStatus },
     });
 
-    res.status(200).json({ message: 'Order status updated successfully', updateOrder });
+    res
+      .status(200)
+      .json({ message: "Order status updated successfully", updateOrder });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
+// export const handlePayment = async (req: Request, res: Response) => {
+//   const { orderId, transaction_status } = req.body;
 
+//   if (!orderId || !transaction_status) {
+//     res.status(400).json({ error: "Missing required parameters" });
+//   }
+//   try {
+//     const updateOrder = await orderService.handlePaymentStatus(
+//       orderId,
+//       transaction_status
+//     );
 
-export const handlePayment = async (req: Request, res: Response) => {
-  const {orderId, transaction_status} = req.body;
-
-  if(!orderId || !transaction_status) {
-    res.status(400).json({ error: "Missing required parameters" });
-  }
-  try {
-
-    const updateOrder = await orderService.handlePaymentStatus(orderId, transaction_status);
-
-    res.status(200).json({ updateOrder });
-    
-  } catch (error) {
-    
-  }
-}
+//     res.status(200).json({ updateOrder });
+//   } catch (error) {}
+// };

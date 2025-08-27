@@ -1,3 +1,4 @@
+import { OrderStatus } from "@prisma/client";
 import { CreateProductDto, UpdateProductDto } from "../dto/productDto";
 import uploader from "../libs/cloudinary";
 import { prisma } from "../libs/prisma";
@@ -10,7 +11,6 @@ export const createProduct = async (
     const categoryId = parseInt(body.categoryId, 10);
     if (isNaN(categoryId)) throw new Error("Invalid category ID");
 
-
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
     });
@@ -22,7 +22,7 @@ export const createProduct = async (
       price: body.price ?? "",
       stok: body.stok ?? "",
       product_desc: body.product_desc ?? "",
-      image: "", 
+      image: "",
     };
 
     if (file) {
@@ -54,6 +54,8 @@ export const getProducts = async () => {
     throw new Error(`Error getting products: ${error}`);
   }
 };
+
+
 
 export const updateProduct = async (
   id: number,
