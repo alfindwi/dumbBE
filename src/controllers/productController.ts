@@ -54,7 +54,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     const err = error as Error;
     res.status(500).json({ error: err.message });
   }
-};
+};  
 
 export const deleteProduct = async (req: Request, res: Response) => {
   try {

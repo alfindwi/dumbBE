@@ -58,3 +58,5 @@ io.on("connection", (socket) => {
 
 
 server.listen(port, () => console.log("Server is running on port 3000"));
+
+// http://localhost:3000/admin/products
